@@ -35,16 +35,19 @@ public unsafe class Core
             foreach (var item in entry.Items)
             {
                 var itemId = item.ItemId;
-                var itemRow = itemSheet.GetRow(itemId % 100000);
+                if (!itemSheet.TryGetRow(itemId % 100000, out var itemRow)) continue;
                 if (itemRow.RowId == 0 || itemRow.EquipSlotCategory.RowId == 17) continue;
 
                 List<SetMateria> materia = new();
                 for (int i = 0; i < item.Materia.Length; i++)
                 {
-                    var matRow = materiaSheet.GetRow(item.Materia[i]);
-                    if (matRow.RowId == 0) continue;
-                    var matObj = matRow.Item[item.MateriaGrades[i]];
-                    materia.Add(new SetMateria(matObj.Value.Icon, matObj.Value.Name.ToString()));
+                    if (item.Materia[i] == 0 || !materiaSheet.TryGetRow(item.Materia[i], out var matRow)) continue;
+                    if (item.MateriaGrades[i] >= matRow.Item.Count) continue;
+
+                    var matItem = matRow.Item[item.MateriaGrades[i]].ValueNullable;
+                    if (matItem is null) continue;
+
+                    materia.Add(new SetMateria(matItem.Value.Icon, matItem.Value.Name.ToString()));
                 }
                 
                 SetItem foundItem = new(itemRow.Icon, itemRow.Name.ToString(), itemRow.ItemUICategory.Value.OrderMajor, materia, item);
